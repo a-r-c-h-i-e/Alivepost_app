@@ -191,10 +191,10 @@ class _HomePageState extends State<HomePage> {
         // Check if this medicine is due NOW (within ±5 min window)
         if (diff.abs() <= dueSoonWindow) {
           // Fire immediately with alarm sound
-          print('[Alarm] 🔔 ${prescription.medicine.name} is DUE NOW ($label)');
+          print('[Alarm]  ${prescription.medicine.name} is DUE NOW ($label)');
           await NotificationService().showAlarmNow(
             id: notifId,
-            title: '💊 Time to take medicine!',
+            title: ' Time to take medicine!',
             body: '${prescription.medicine.name} ${prescription.medicine.dosage} — $label',
             payload: prescription.medicine.name,
           );
@@ -210,7 +210,7 @@ class _HomePageState extends State<HomePage> {
           try {
             await NotificationService().scheduleNotification(
               id: notifId,
-              title: '💊 Medicine Reminder',
+              title: ' Medicine Reminder',
               body:
                   'Time to take ${prescription.medicine.name} ${prescription.medicine.dosage} ($label)',
               scheduledTime: scheduledDate,
@@ -261,7 +261,6 @@ class _HomePageState extends State<HomePage> {
     );
 
     if (selectedTime != null && mounted) {
-      // Schedule notification
       final now = DateTime.now();
       var scheduledDate = DateTime(
         now.year,
@@ -275,21 +274,52 @@ class _HomePageState extends State<HomePage> {
         scheduledDate = scheduledDate.add(const Duration(days: 1));
       }
 
-      await NotificationService().scheduleNotification(
-        id: prescription.id.hashCode, // Unique ID
-        title: 'Medicine Reminder',
-        body: 'Take ${prescription.medicine.name} ${prescription.medicine.dosage} now!',
-        scheduledTime: scheduledDate,
-        payload: prescription.medicine.name,
-      );
+      // Use a unique ID that won't collide with auto-scheduled ones
+      final notifId = 'manual_${prescription.id}_${selectedTime.hour}_${selectedTime.minute}'.hashCode;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Reminder set for ${selectedTime.format(context)}',
-          ),
-        ),
-      );
+      try {
+        final diff = scheduledDate.difference(now);
+
+        if (diff.inMinutes <= 1) {
+          // If within 1 minute, fire immediately
+          await NotificationService().showAlarmNow(
+            id: notifId,
+            title: '💊 Medicine Reminder',
+            body: 'Take ${prescription.medicine.name} ${prescription.medicine.dosage} now!',
+            payload: prescription.medicine.name,
+          );
+        } else {
+          // Schedule for later
+          await NotificationService().scheduleNotification(
+            id: notifId,
+            title: '💊 Medicine Reminder',
+            body: 'Take ${prescription.medicine.name} ${prescription.medicine.dosage} now!',
+            scheduledTime: scheduledDate,
+            payload: prescription.medicine.name,
+          );
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Reminder set for ${selectedTime.format(context)}',
+              ),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        print('[Alarm ERROR] Manual scheduling failed: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to set reminder: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     }
   }
 

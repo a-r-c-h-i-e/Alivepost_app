@@ -184,7 +184,7 @@ class NotificationService {
       print('[AlarmService] Scheduling remind-later at $remindTime');
       await flutterLocalNotificationsPlugin.zonedSchedule(
         id: DateTime.now().millisecond,
-        title: '💊 Medicine Reminder',
+        title: 'Medicine Reminder',
         body: 'Time to take your medicine!',
         scheduledDate: remindTime,
         notificationDetails: NotificationDetails(android: _alarmDetails),
